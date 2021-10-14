@@ -120,8 +120,8 @@ class ping_exporter:
             self._log.debug(f"  Jitter: {host.jitter}")
             self.icmp_jitter.labels(host.address).set(host.jitter)
             for index in range(0, self.count):
-                self._log.debug(f"  Time rtt {index}: {host.rtts[index-1]}")
-                self.icmp_gauge[index].labels(host.address).set(host.rtts[index-1])
+                self._log.debug(f"  Time rtt {index}: {host.rtts[index]}")
+                self.icmp_gauge[index].labels(host.address).set(host.rtts[index])
 
 def validate_ip(ctx, param, value):
     ''' Check if a parameter is a valid IP address '''

@@ -24,6 +24,22 @@ sudo python3 setup.py install
 
 ## Usage
 
-  ```bash
-  ping_exporter.py [--debug-level|-d CRITICAL|ERROR|WARNING|INFO|DEBUG|NOTSET] # Other parameters
-  ```
+Usage: ping_exporter.py [OPTIONS]
+```
+Options:
+  -d, --debug-level [CRITICAL|ERROR|WARNING|INFO|DEBUG|NOTSET]
+                                  Set the debug level for the standard output.
+  -l, --log-file TEXT             File to store all debug messages.
+  -t, --targets TEXT              IP address of the target to ping.
+  -c, --count INTEGER             Number of packets to send.
+  -p, --port INTEGER RANGE        Port to listen for collector to fetch
+                                  metrics.  [1<=x<=65535]
+  -f, --frequency FLOAT RANGE     Time between gathering pings.
+                                  [0.01<=x<=99999]
+  -i, --interval FLOAT RANGE      Time between packets sent.  [0.01<=x<=99999]
+  -o, --timeout FLOAT RANGE       The maximum waiting time for receiving a
+                                  reply in seconds.  [0.01<=x<=99999]
+  -a, --family [4|6]              IP family version to use.
+  --config FILE                   Read configuration from FILE.
+  --help                          Show this message and exit.
+```

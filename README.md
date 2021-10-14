@@ -9,6 +9,11 @@ Spin a web server to export ping metrics. Can use several targets to ping and in
 
 ## Installation
 
+
+### Ansible
+
+Check [ansible-role-ping_exporter](https://github.com/ajdelgado/ansible-role-ping_exporter).
+
 ### Linux
 Tested in Ubuntu 20.10
 

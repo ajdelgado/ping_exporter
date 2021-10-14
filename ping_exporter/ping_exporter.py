@@ -57,7 +57,7 @@ class ping_exporter:
         self.frequency = frequency
         self.interval = interval
         self.timeout = timeout
-        self.family = family
+        self.family = int(family)
         self.icmp_avg_gauge = Gauge('ping_average_round_trip', 'Average time of round-trip ping to target', ['target'])
         self.icmp_lost_packets = Gauge('ping_lost_packets', 'Percent of packets lost pinging target (0 to 1)', ['target'])
         self.icmp_jitter = Gauge('ping_jitter', 'The jitter in milliseconds, defined as the variance of the latency of packets flowing through the network (0 to 1)', ['target'])
@@ -147,7 +147,7 @@ def validate_global_ip(ctx, param, value):
 @click.option('--frequency', '-f', default=10, type=click.IntRange(5, 99999), help="Time between gathering pings.")
 @click.option('--interval', '-i', default=1, type=click.IntRange(1, 99999), help="Time between packets sent.")
 @click.option('--timeout', '-o', default=2, type=click.IntRange(1, 99999), help="The maximum waiting time for receiving a reply in seconds.")
-@click.option('--family', '-a', default=4, type=click.Choice([4, 6]), help="IP family version to use.")
+@click.option('--family', '-a', default="4", type=click.Choice(["4", "6"]), help="IP family version to use.")
 @click_config_file.configuration_option()
 def __main__(debug_level, log_file, target, count, port, frequency, interval, timeout, family):
     object = ping_exporter(debug_level, log_file, target, count, port, frequency, interval, timeout, family)

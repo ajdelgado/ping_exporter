@@ -12,7 +12,7 @@ import click
 import click_config_file
 from logging.handlers import SysLogHandler
 from prometheus_client import start_http_server, Gauge
-from icmplib import ping
+from icmplib import multiping
 import ipaddress
 import time
 
@@ -44,14 +44,14 @@ class CustomFormatter(logging.Formatter):
 
 class ping_exporter:
 
-    def __init__(self, debug_level, log_file, target, count, port, frequency, interval, timeout, family):
+    def __init__(self, debug_level, log_file, targets, count, port, frequency, interval, timeout, family):
         ''' Initial function called when object is created '''
         self.debug_level = debug_level
         if log_file is None:
             log_file = os.path.join(os.environ.get('HOME', os.environ.get('USERPROFILE', os.getcwd())), 'log', 'ping_exporter.log')
         self.log_file = log_file
         self._init_log()
-        self.target = target
+        self.targets = targets
         self.count = count
         self.port = port
         self.frequency = frequency
@@ -72,20 +72,6 @@ class ping_exporter:
             self._log.debug(f"Waiting {self.frequency} seconds")
             time.sleep(self.frequency)
 
-
-    def gather_metrics(self):
-        self._log.debug(f"Pinging target '{self.target}'")
-        self.host = self.ping()
-        self._log.debug(f"Average round trip: {self.host.avg_rtt}")
-        self.icmp_avg_gauge.labels(self.host.address).set(self.host.avg_rtt)
-        self._log.debug(f"Percent packets lost: {self.host.packet_loss}")
-        self.icmp_lost_packets.labels(self.host.address).set(self.host.packet_loss)
-        self._log.debug(f"Jitter: {self.host.jitter}")
-        self.icmp_jitter.labels(self.host.address).set(self.host.jitter)
-        for index in range(0, self.count):
-            self._log.debug(f"Time rtt {index}: {self.host.rtts[index-1]}")
-            self.icmp_gauge[index].labels(self.host.address).set(self.host.rtts[index-1])
-        
 
     def _init_log(self):
         ''' Initialize log object '''
@@ -116,23 +102,35 @@ class ping_exporter:
 
     def ping(self):
         try:
-            host = ping(self.target, family=self.family, interval=self.interval, timeout=self.timeout, count=self.count, privileged=False)
-            return host
+            hosts = multiping(self.targets, family=self.family, interval=self.interval, timeout=self.timeout, count=self.count, privileged=False)
+            return hosts
         except:
             self._log.error('Check that you can send ICMP packets. You can set extend the group range able to do it with: echo \'net.ipv4.ping_group_range = 0 2147483647\' | sudo tee -a /etc/sysctl.conf; sudo sysctl -p')
             return False
 
+    def gather_metrics(self):
+        self._log.debug(f"Pinging targets '{', '.join(self.targets)}'")
+        self.hosts = self.ping()
+        for host in self.hosts:
+            self._log.debug(f"Results for host: {host.address}")
+            self._log.debug(f"  Average round trip: {host.avg_rtt}")
+            self.icmp_avg_gauge.labels(host.address).set(host.avg_rtt)
+            self._log.debug(f"  Percent packets lost: {host.packet_loss}")
+            self.icmp_lost_packets.labels(host.address).set(host.packet_loss)
+            self._log.debug(f"  Jitter: {host.jitter}")
+            self.icmp_jitter.labels(host.address).set(host.jitter)
+            for index in range(0, self.count):
+                self._log.debug(f"  Time rtt {index}: {host.rtts[index-1]}")
+                self.icmp_gauge[index].labels(host.address).set(host.rtts[index-1])
 
-def validate_global_ip(ctx, param, value):
-    ''' Check if a parameter is a valid global IP address '''
-    try:
-        anip = ipaddress.ip_address(value)
-        if not anip.is_global:
-            raise click.BadParameter(f"{value} is not a valid Global (public) IP address.")
-        else:
-            return value
-    except:
-        raise click.BadParameter(f"{value} is not a valid Global (public) IP address.")
+def validate_ip(ctx, param, value):
+    ''' Check if a parameter is a valid IP address '''
+    for item in value:
+        try:
+            anip = ipaddress.ip_address(item)
+        except:
+            raise click.BadParameter(f"{item} is not a valid IP address.")
+    return value
 
 @click.command()
 @click.option("--debug-level", "-d", default="INFO",
@@ -141,7 +139,7 @@ def validate_global_ip(ctx, param, value):
         case_sensitive=False,
     ), help='Set the debug level for the standard output.')
 @click.option('--log-file', '-l', help="File to store all debug messages.")
-@click.option('--target', '-t', default="1.1.1.1", callback=validate_global_ip, help="IP address of the target to ping.")
+@click.option('--targets', '-t', default=["1.1.1.1"], multiple=True, callback=validate_ip, help="IP address of the target to ping.")
 @click.option('--count', '-c', default=4, type=int, help="Number of packets to send.")
 @click.option('--port', '-p', default=8787, type=click.IntRange(1, 65535), help="Port to listen for collector to fetch metrics.")
 @click.option('--frequency', '-f', default=10, type=click.IntRange(5, 99999), help="Time between gathering pings.")
@@ -149,8 +147,8 @@ def validate_global_ip(ctx, param, value):
 @click.option('--timeout', '-o', default=2, type=click.IntRange(1, 99999), help="The maximum waiting time for receiving a reply in seconds.")
 @click.option('--family', '-a', default="4", type=click.Choice(["4", "6"]), help="IP family version to use.")
 @click_config_file.configuration_option()
-def __main__(debug_level, log_file, target, count, port, frequency, interval, timeout, family):
-    object = ping_exporter(debug_level, log_file, target, count, port, frequency, interval, timeout, family)
+def __main__(debug_level, log_file, targets, count, port, frequency, interval, timeout, family):
+    object = ping_exporter(debug_level, log_file, targets, count, port, frequency, interval, timeout, family)
 
 if __name__ == "__main__":
     __main__()

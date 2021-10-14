@@ -119,7 +119,7 @@ class ping_exporter:
             self.icmp_lost_packets.labels(host.address).set(host.packet_loss)
             self._log.debug(f"  Jitter: {host.jitter}")
             self.icmp_jitter.labels(host.address).set(host.jitter)
-            for index in range(0, self.count):
+            for index in range(0, len(host.rtts)):
                 self._log.debug(f"  Time rtt {index}: {host.rtts[index]}")
                 self.icmp_gauge[index].labels(host.address).set(host.rtts[index])
 
@@ -142,9 +142,9 @@ def validate_ip(ctx, param, value):
 @click.option('--targets', '-t', default=["1.1.1.1"], multiple=True, callback=validate_ip, help="IP address of the target to ping.")
 @click.option('--count', '-c', default=4, type=int, help="Number of packets to send.")
 @click.option('--port', '-p', default=8787, type=click.IntRange(1, 65535), help="Port to listen for collector to fetch metrics.")
-@click.option('--frequency', '-f', default=10, type=click.IntRange(5, 99999), help="Time between gathering pings.")
-@click.option('--interval', '-i', default=1, type=click.IntRange(1, 99999), help="Time between packets sent.")
-@click.option('--timeout', '-o', default=2, type=click.IntRange(1, 99999), help="The maximum waiting time for receiving a reply in seconds.")
+@click.option('--frequency', '-f', default=10, type=click.FloatRange(0.01, 99999), help="Time between gathering pings.")
+@click.option('--interval', '-i', default=1, type=click.FloatRange(0.01, 99999), help="Time between packets sent.")
+@click.option('--timeout', '-o', default=2, type=click.FloatRange(0.01, 99999), help="The maximum waiting time for receiving a reply in seconds.")
 @click.option('--family', '-a', default="4", type=click.Choice(["4", "6"]), help="IP family version to use.")
 @click_config_file.configuration_option()
 def __main__(debug_level, log_file, targets, count, port, frequency, interval, timeout, family):
